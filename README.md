@@ -1,3 +1,9 @@
+Copyright (C) 2026 Daniel Fruzzetti
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
 # 👂 Ears — Zero-Gap RTSP Audio Captioning Utility
 
 **Ears** is a lightweight, standalone, cross-platform utility that turns any NVR or IP camera microphone on your local network into a live, searchable, zero-gap audio transcript log — running 100% locally on your own hardware (**Linux**, **Windows**, and **macOS**).
