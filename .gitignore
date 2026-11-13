@@ -1,0 +1,37 @@
+# Python & Virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# Runtime Data, Manifest & User Config
+config.json
+config.json.tmp
+.install_manifest
+Start_Ears_Tray.vbs
+Start_Ears_Console.bat
+data/
+*.db
+*.db-journal
+*.wav
+*.opus
+*.log
+
+# Packaging Artifacts
+*.run
+*.exe
+*.dmg
+*.app/
+packaging/windows/runtime/
+packaging/windows/Output/
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

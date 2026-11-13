@@ -1,0 +1,10 @@
+# Ensure Unix shell scripts, macOS .command launchers, and Python files always keep LF line endings
+*.sh text eol=lf
+*.command text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+
+# Windows batch and PowerShell scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.iss text eol=crlf

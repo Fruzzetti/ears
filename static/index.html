@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ears — NVR & Camera Audio Captioning</title>
+  <link rel="stylesheet" href="/style.css?v=5" />
+</head>
+<body>
+  <!-- First-Run Setup / Login Overlay Modal -->
+  <div id="auth-overlay" class="modal-backdrop hidden">
+    <div class="glass-card auth-modal">
+      <div class="brand-header">
+        <div class="ear-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/>
+            <path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>
+          </svg>
+        </div>
+        <div>
+          <h2 id="auth-title">Welcome to Ears</h2>
+          <p id="auth-subtitle" class="muted">Create your administrator account for first-run setup.</p>
+        </div>
+      </div>
+
+      <form id="auth-form">
+        <div class="form-field">
+          <label for="auth-username">Username</label>
+          <input type="text" id="auth-username" value="admin" required autocomplete="username" />
+        </div>
+        <div class="form-field">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="At least 4 characters" required autocomplete="current-password" />
+        </div>
+        <div id="auth-setup-options" class="setup-options">
+          <label class="checkbox-row">
+            <input type="checkbox" id="auth-auto-local" checked />
+            <span>Auto-login without password when opened on this computer (<code>127.0.0.1</code>)</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="auth-allow-lan" checked />
+            <span>Allow LAN access from other devices (always requires login)</span>
+          </label>
+          <div class="legal-setup-note">
+            <strong>⚖️ Legal &amp; Signage Notice:</strong> Wiretapping, eavesdropping, and multi-party recording laws in your jurisdiction may require visible signage or explicit consent before capturing or transcribing audio. Always verify your local laws before deploying.
+          </div>
+        </div>
+        <div id="auth-error" class="error-banner hidden"></div>
+        <button type="submit" id="auth-submit-btn" class="btn btn-primary full-width">Complete Setup & Start Ears</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="ear-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/>
+          <path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="app-title-row">
+          <span class="app-name">EARS</span>
+          <span id="status-pill" class="status-pill status-active">
+            <span class="pulse-dot"></span>
+            <span id="status-pill-text">Capturing</span>
+          </span>
+        </div>
+        <div class="app-tagline">Zero-Gap NVR & Camera Audio Captioning</div>
+      </div>
+    </div>
+
+    <nav class="view-tabs">
+      <button id="tab-transcripts" class="tab-btn active" onclick="switchView('transcripts')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Live Transcripts
+      </button>
+      <button id="tab-settings" class="tab-btn" onclick="switchView('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Devices & Settings
+      </button>
+    </nav>
+
+    <div class="topbar-right">
+      <div id="hw-badge" class="hw-badge" title="Active Hardware & Whisper Model">
+        Probing hardware...
+      </div>
+      <button id="pause-btn" class="btn btn-ghost btn-sm" onclick="togglePause()">
+        Pause
+      </button>
+      <button id="logout-btn" class="btn btn-ghost btn-sm hidden" onclick="logout()">
+        Log Out
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="container">
+    <!-- Backpressure / Warning Banner -->
+    <div id="backpressure-banner" class="warning-banner hidden"></div>
+
+    <!-- ==================================================================== -->
+    <!-- VIEW 1: LIVE TRANSCRIPTS                                             -->
+    <!-- ==================================================================== -->
+    <section id="view-transcripts" class="view-section">
+      <div class="glass-card controls-bar">
+        <div class="date-nav">
+          <button class="btn btn-icon" onclick="shiftDate(-1)" title="Previous Day">&larr;</button>
+          <input type="date" id="filter-date" onchange="loadTranscripts()" />
+          <button class="btn btn-icon" onclick="shiftDate(1)" title="Next Day">&rarr;</button>
+          <button class="btn btn-ghost btn-sm" onclick="setToday()">Today</button>
+        </div>
+
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="filter-search" placeholder="Search spoken words, camera, or NVR..." oninput="debounceSearch()" />
+          <label class="all-dates-toggle" title="Search across all stored days">
+            <input type="checkbox" id="search-all-dates" onchange="loadTranscripts()" />
+            <span>All Dates</span>
+          </label>
+        </div>
+
+        <div class="export-actions">
+          <button class="btn btn-ghost btn-sm" onclick="exportTranscripts('txt')" title="Download .txt">
+            Export .TXT
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="exportTranscripts('csv')" title="Download .csv">
+            .CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Camera & NVR Quick Filter Pills -->
+      <div id="camera-pills" class="pills-row"></div>
+
+      <!-- Transcripts Timeline Feed -->
+      <div id="transcripts-list" class="transcripts-feed">
+        <div class="empty-state">Loading transcripts...</div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- VIEW 2: DEVICES & SETTINGS                                           -->
+    <!-- ==================================================================== -->
+    <section id="view-settings" class="view-section hidden">
+      <!-- 1. Unified NVRs & Cameras Section -->
+      <div class="glass-card section-card">
+        <div class="section-header">
+          <div>
+            <h3>1. NVRs & Cameras</h3>
+            <p class="muted">Add your NVRs or standalone cameras, auto-discover channels, and toggle which microphones to caption.</p>
+          </div>
+          <div class="header-buttons">
+            <button id="scan-lan-btn" class="btn btn-accent" onclick="scanLanForNvrs()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span>Scan Network for NVRs (5s)</span>
+            </button>
+            <button class="btn btn-primary" onclick="addNvrCard()">
+              + Add NVR / Camera
+            </button>
+          </div>
+        </div>
+
+        <!-- Network Scanner Drawer -->
+        <div id="scanner-drawer" class="scanner-drawer hidden">
+          <div class="scanner-drawer-header">
+            <span id="scanner-status-text">Scanning local subnets via ARP, Dahua/Hikvision/ONVIF/Reolink broadcasts & TCP sweep...</span>
+            <button class="btn btn-ghost btn-xs" onclick="closeScannerDrawer()">Close</button>
+          </div>
+          <div id="scanner-results" class="scanner-results-grid"></div>
+        </div>
+
+        <!-- NVR Cards Container -->
+        <div id="nvr-cards-container" class="nvr-cards-list"></div>
+
+        <div class="legal-notice-banner">
+          <strong>⚖️ Audio Recording &amp; Wiretapping Compliance:</strong> Capturing or transcribing spoken conversations is subject to federal, state, and local wiretapping / multi-party consent laws, which may require posted signage or explicit notice in monitored areas. Please verify your local laws before deploying.
+        </div>
+      </div>
+
+      <!-- 2. Storage, Audio Retention & Predictive Disk Meter -->
+      <div class="glass-card section-card">
+        <div class="section-header">
+          <div>
+            <h3>2. Storage, Audio Retention & Predictive Space Meter</h3>
+            <p class="muted">Configure where daily plaintext <code>.txt</code> logs, SQLite database, and optional audio snippets are stored.</p>
+          </div>
+        </div>
+
+        <div class="settings-grid-2">
+          <div class="form-field">
+            <label for="cfg-storage-path">Transcript & Audio Storage Folder</label>
+            <div class="input-with-btn">
+              <input type="text" id="cfg-storage-path" placeholder="e.g. Z:\ears\data" onchange="updateStoragePreview()" />
+              <button type="button" class="btn btn-ghost" onclick="browseStorageFolder()">Browse...</button>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Audio Snippet Recording</label>
+            <div class="toggle-row-box" onclick="toggleSaveAudioSwitch()">
+              <div id="toggle-save-audio" class="toggle-switch">
+                <div class="toggle-knob"></div>
+              </div>
+              <div>
+                <div class="toggle-title">Save Audio Files Alongside Transcripts</div>
+                <div class="muted small">Allows inline ▶ playback in the timeline (synced with System Tray menu)</div>
+              </div>
+            </div>
+            <div id="text-only-warning" class="caution-callout hidden">
+              <strong>⚠️ Text-Only Mode Notice:</strong> Automatic AI captions are a search aid and may contain transcription errors or omissions. Unverified transcripts do not have standalone evidentiary value in court—keep audio recording enabled (or ensure your NVR retains the original audio stream) if you may need verifiable evidence.
+            </div>
+          </div>
+        </div>
+
+        <!-- Retention Slider + Live Predictive Disk Space Estimator -->
+        <div class="storage-meter-panel">
+          <div class="slider-header">
+            <label for="cfg-retention-days">
+              Back-Records Retention Period: <strong id="retention-days-label" class="accent-text">30 Days</strong>
+            </label>
+            <div class="retention-quick-btns">
+              <button type="button" class="btn btn-ghost btn-xs" onclick="setRetentionDays(7)">7d</button>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="setRetentionDays(30)">30d</button>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="setRetentionDays(90)">90d</button>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="setRetentionDays(365)">1 Year</button>
+            </div>
+          </div>
+
+          <input type="range" id="cfg-retention-days" min="1" max="365" value="30" class="range-slider" oninput="onRetentionSliderMove(this.value)" />
+
+          <div class="storage-comparison-cards">
+            <div class="storage-stat-box">
+              <div class="stat-label">CURRENTLY USED ON DISK</div>
+              <div id="stat-current-total" class="stat-value">0 KB</div>
+              <div id="stat-current-breakdown" class="stat-sub">Transcripts: 0 KB • Audio Clips: 0 KB</div>
+            </div>
+
+            <div class="storage-stat-box predicted-box">
+              <div class="stat-label">PREDICTED AT <span id="pred-days-span">30</span> DAYS (<span id="pred-audio-span">Text Only</span>)</div>
+              <div id="stat-predicted-total" class="stat-value accent-text">0 MB</div>
+              <div id="stat-predicted-breakdown" class="stat-sub">Est. Rate: 0 MB/day • 0% of free drive space</div>
+            </div>
+
+            <div class="storage-stat-box">
+              <div class="stat-label">AVAILABLE ON DRIVE</div>
+              <div id="stat-drive-free" class="stat-value">0 GB</div>
+              <div id="stat-drive-total" class="stat-sub">Total Capacity: 0 GB</div>
+            </div>
+          </div>
+
+          <div class="meter-bar-outer">
+            <div id="meter-bar-current" class="meter-bar-current" style="width: 1%"></div>
+            <div id="meter-bar-predicted" class="meter-bar-predicted" style="width: 2%"></div>
+          </div>
+
+          <div class="storage-actions-row">
+            <span class="muted small">Predictions automatically scale with your enabled camera count and audio toggle before you click Save.</span>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="pruneRecordsNow()">Prune Old Records Now</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Hardware Performance Override & Caption Fine-Tuning -->
+      <div class="glass-card section-card">
+        <div class="section-header">
+          <div>
+            <h3>3. Hardware Auto-Scaling & Timeline Fine-Tuning</h3>
+            <p class="muted">Ears automatically selects the best GPU/CPU model on every startup. Override here or from the System Tray anytime you need your GPU for other tasks.</p>
+          </div>
+        </div>
+
+        <div class="settings-grid-3">
+          <div class="form-field">
+            <label for="cfg-perf-profile">Hardware Performance Profile</label>
+            <select id="cfg-perf-profile">
+              <option value="auto">Auto-Detect Best Hardware on Startup (Recommended)</option>
+              <option value="gpu_high">High Accuracy GPU (large-v3-turbo / float16)</option>
+              <option value="gpu_light">Light GPU — Save VRAM (small / int8_float16)</option>
+              <option value="cpu_balanced">CPU Only — Free Up GPU (small / int8)</option>
+              <option value="cpu_eco">Low-Power Eco CPU (base / int8)</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="cfg-model-override">Explicit Whisper Model Override</label>
+            <select id="cfg-model-override">
+              <option value="auto">Auto (Managed by Hardware Profile)</option>
+              <option value="tiny">tiny (~75 MB — Fastest)</option>
+              <option value="base">base (~145 MB — Light CPU)</option>
+              <option value="small">small (~480 MB — Balanced)</option>
+              <option value="medium">medium (~1.5 GB — High Accuracy)</option>
+              <option value="large-v3-turbo">large-v3-turbo (~1.6 GB — Best GPU)</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="cfg-segment-duration">Audio Capture Segment Length (Seconds)</label>
+            <input type="number" id="cfg-segment-duration" min="10" max="180" value="30" />
+          </div>
+
+          <div class="form-field">
+            <label for="cfg-group-window">Paragraph Grouping Window (Seconds)</label>
+            <input type="number" id="cfg-group-window" min="0" max="30" step="0.5" value="5.0" />
+          </div>
+
+          <div class="form-field">
+            <label for="cfg-vad-threshold">Voice Activity Sensitivity (VAD 0.05 – 0.8)</label>
+            <input type="number" id="cfg-vad-threshold" min="0.05" max="0.8" step="0.05" value="0.2" />
+          </div>
+
+          <div class="form-field">
+            <label for="cfg-web-port">Web UI Listen Port</label>
+            <input type="number" id="cfg-web-port" min="1024" max="65535" value="8765" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Access Control & Security -->
+      <div class="glass-card section-card">
+        <div class="section-header">
+          <div>
+            <h3>4. Security & Local / LAN Access</h3>
+            <p class="muted">When LAN access is enabled, connections from other computers always require your username and password.</p>
+          </div>
+        </div>
+
+        <div class="settings-grid-2">
+          <div class="toggle-row-box" onclick="toggleConfigFlag('AUTO_LOGIN_LOCALHOST')">
+            <div id="toggle-auto-local" class="toggle-switch active">
+              <div class="toggle-knob"></div>
+            </div>
+            <div>
+              <div class="toggle-title">Allow No-Login Access on Localhost (127.0.0.1)</div>
+              <div class="muted small">Bypass login screen when opening Ears directly on this machine</div>
+            </div>
+          </div>
+
+          <div class="toggle-row-box" onclick="toggleConfigFlag('ALLOW_LAN_ACCESS')">
+            <div id="toggle-allow-lan" class="toggle-switch active">
+              <div class="toggle-knob"></div>
+            </div>
+            <div>
+              <div class="toggle-title">Allow LAN Access from Other Computers</div>
+              <div class="muted small">Remote computers on your network must always sign in</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky Save Bar -->
+      <div class="save-bar glass-card">
+        <span id="save-status-msg" class="muted">All changes apply immediately to active camera streams upon saving.</span>
+        <button class="btn btn-primary btn-lg" onclick="saveAllSettings()">
+          Save & Apply Configuration
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js?v=5"></script>
+</body>
+</html>
